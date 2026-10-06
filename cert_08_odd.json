@@ -1,0 +1,22 @@
+{
+ "parity": "odd",
+ "L": 0.8,
+ "T_sharp": 200.0,
+ "N": 200,
+ "panels": 400,
+ "prec_bits": 320,
+ "beta": 0.5134667749150708,
+ "lambda_mid": "1.1410526e-14",
+ "max_radius_M": 5.9686036628448784e-92,
+ "eps_B": 3.6860286594637735e-103,
+ "eps_D": 1.2381595832491012e-213,
+ "eps_quad": 6.241230108935568e-28,
+ "quad_rigorous": true,
+ "residual": 6.100254050515523e-90,
+ "head_lower": 1.1296420663315472e-14,
+ "verified": true,
+ "tail_block_lower": 0.5134667749150708,
+ "tail_block_ok": true,
+ "certified_lower_bound": 1.1296420663314848e-14,
+ "final_s": 11.2
+}

@@ -1,0 +1,204 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage[margin=2.6cm]{geometry}
+\usepackage{booktabs,array}
+\usepackage[hidelinks]{hyperref}
+
+\newtheorem{theorem}{Satz}
+\newtheorem{lemma}[theorem]{Lemma}
+\theoremstyle{definition}
+\newtheorem{observation}{Beobachtung}
+
+\renewcommand{\Re}{\operatorname{Re}}
+\renewcommand{\Im}{\operatorname{Im}}
+\newcommand{\eps}{\varepsilon}
+\renewcommand{\abstractname}{Zusammenfassung}
+\renewcommand{\refname}{Literatur}
+\renewcommand{\tablename}{Tabelle}
+\renewcommand{\appendixname}{Anhang}
+\renewcommand{\proofname}{Beweis}
+\setlength{\emergencystretch}{3em}
+
+\title{Weil-Positivität auf den Fenstern $[-0{,}8;\,0{,}8]$ und $[-0{,}9;\,0{,}9]$:\\
+ein unabhängiges, offenes Zertifikat für beide Paritätssektoren}
+\author{Sabrina Hackfort\\[2pt]
+\small MEGALODON Research (unabhängig), Deutschland\\
+\small ORCID 0009-0007-7458-2487 \quad \texttt{meg.depth@proton.me}}
+\date{6.~Oktober 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Nach Weils Kriterium ist die Riemannsche Vermutung äquivalent zur Positivität einer quadratischen Form $Q$ auf Testfunktionen beliebigen Trägers. Positivität auf einem festen Fenster $[-L,L]$ ist eine unbedingte, endliche Aussage, die sich rechnergestützt beweisen lässt. Zhu (2026) hat das Fenster $L=0{,}8$ zertifiziert; Liu (2026) hat inzwischen Zertifikate für $L=1$ und $L=17/16$ angekündigt. Wir geben eine unabhängige Implementierung mit offen verfügbarem Code an, die
+\[
+Q(f)\ \ge\ 1{,}017\cdot10^{-17}\,\|f\|_2^2 \quad (L=0{,}8),\qquad
+Q(f)\ \ge\ 2{,}925\cdot10^{-23}\,\|f\|_2^2 \quad (L=0{,}9)
+\]
+für alle $f\in C_c^\infty((-L,L);\mathbb C)$ zertifiziert. Beide Paritätssektoren werden getrennt zertifiziert (der ungerade Sektor hat einen negativen Polterm und einen größeren Abstand, $1{,}13\cdot10^{-14}$ bzw.\ $4{,}88\cdot10^{-20}$). Der Beweis verwendet Zhus endliche Reduktion, eine gerade/ungerade Legendre-Basis, Mittelpunkt-Radius-Ballarithmetik, eine Bernstein-Ellipsen-Schranke für den Quadraturfehler mit expliziter Digamma-Abschätzung und eine Rump-Verifikation des kleinsten Eigenwerts. Zusätzlich halten wir zwei numerische (nicht zertifizierte) Beobachtungen fest: Ohne die Primzahlterme wird die Form bei halber Fensterbreite $\approx0{,}3716$ indefinit, etwa $7\,\%$ nach dem Eintritt der ersten Primzahl bei $\tfrac12\log2$; und die Zahl der negativen Richtungen des archimedischen Teils folgt einer Slepian-Zählung mit Bandbreite $t_0=6{,}28983\ldots$. Nichts hier beweist oder widerlegt die Riemannsche Vermutung.
+\end{abstract}
+
+\section{Einleitung}
+
+Für eine Testfunktion $f$ sei $g=f*\tilde f$, $\tilde f(x)=\overline{f(-x)}$. Weils explizite Formel drückt $\sum_\rho \hat g(\gamma_\rho)$ über die nichttrivialen Nullstellen $\rho=\tfrac12+i\gamma_\rho$ von $\zeta$ durch einen Polterm, einen archimedischen Term und eine Summe über Primzahlpotenzen aus. Weil \cite{Weil52} zeigte: Die Riemannsche Vermutung (RV) gilt genau dann, wenn diese Größe für alle $f$ nichtnegativ ist. Die Einschränkung auf $\operatorname{supp} f\subseteq[-L,L]$ liefert eine Familie von Positivitätsaussagen, indiziert durch das Fenster $L$; jede ist unbedingt und enthält nur die endlich vielen Primzahlpotenzen $n<e^{2L}$.
+
+Für kleine Fenster ist Positivität analytisch bekannt (Yoshida \cite{Yoshida92}; Connes--Consani \cite{CC21} an der archimedischen Stelle). Zhu \cite{Zhu26} reduzierte das Fensterproblem auf eine endliche Semidefinitheitsprüfung und zertifizierte $L=0{,}8$ mit Abstand $8{,}9\cdot10^{-18}$; er beobachtete außerdem einen doppelt exponentiellen Abfall der optimalen Konstante in $L$ (Landau--Widom-Gesetz), der erklärt, warum jedes weitere Fenster teuer ist. Liu \cite{Liu26} kündigte Zertifikate für $L=1$ (Abstand $2^{-151}$) und $L=17/16$ an.
+
+\paragraph{Beitrag.} (i) Eine unabhängige Neuimplementierung von Zhus Reduktion, die $L=0{,}8$ reproduziert; (ii) ein Zertifikat beim Zwischenfenster $L=0{,}9$, das die beiden veröffentlichten Endpunkte gegenprüft; (iii) eine explizite Behandlung beider Paritätssektoren; (iv) vollständig veröffentlichter Code und Zertifikatsdateien. Die technischen Bausteine (Abschnitt~\ref{sec:method}) sind Standardwerkzeuge der verifizierten Numerik; jede verwendete Schranke wird angegeben.
+
+\section{Rahmen und Reduktion}
+
+Wir verwenden $\hat f(z)=\int_{\mathbb R} f(u)e^{izu}\,du$, die von-Mangoldt-Funktion $\Lambda$, $c_n=2\Lambda(n)/\sqrt n$ und
+\[
+A(t)=\Re\psi\!\left(\tfrac14+\tfrac{it}2\right)-\log\pi,\qquad
+\Psi_L(t)=A(t)-\sum_{\log n<2L}c_n\cos(t\log n),\qquad A_L=\sum_{\log n<2L}c_n .
+\]
+Für reelles $f$ mit Träger in $[-L,L]$ lautet die Weil-Form
+\begin{equation}\label{eq:Q}
+Q(f)=2\,\hat f(\tfrac i2)\,\hat f(-\tfrac i2)+\frac1\pi\int_0^\infty \Psi_L(t)\,|\hat f(t)|^2\,dt ,
+\end{equation}
+und $Q(f)=Q(\Re f)+Q(\Im f)$ für komplexes $f$. Unter der RV gilt $Q(f)=\sum_\rho|\hat f(\gamma_\rho)|^2$.
+
+\paragraph{Paritätssektoren.} Sei $f=f_g+f_u$ (gerader und ungerader Anteil). Für reelles $f$ ist $\hat f_g$ reell und $\hat f_u$ auf $\mathbb R$ rein imaginär, also hat das Integral in \eqref{eq:Q} keinen Mischterm; und wegen $\hat f_u(-\tfrac i2)=-\hat f_u(\tfrac i2)$ ist der Polterm $2\hat f_g(\tfrac i2)^2-2\hat f_u(\tfrac i2)^2$. Also
+\[
+Q(f)=Q(f_g)+Q(f_u),
+\]
+und Positivität auf dem Fenster ist äquivalent zur Positivität in jedem Sektor. Im ungeraden Sektor ist der Polterm \emph{nichtpositiv}.
+
+\begin{lemma}[Schwanz des archimedischen Symbols]\label{lem:binet}
+Für $t\ge1$ gilt $A(t)\ge\log\frac t{2\pi}-\frac1t$. Folglich gilt für $T^\sharp>T_1:=2\pi e^{A_L}$, $T^\sharp\ge1$:
+\[
+\Psi_L(t)\ \ge\ \beta^*:=\log\frac{T^\sharp}{2\pi}-\frac1{T^\sharp}-A_L\qquad (t\ge T^\sharp).
+\]
+\end{lemma}
+\begin{proof}
+Binets zweite Formel liefert für $\Re w>0$: $\psi(w)=\log w-\frac1{2w}-2\int_0^\infty\frac{s\,ds}{(s^2+w^2)(e^{2\pi s}-1)}$. Für $w=\frac14+\frac{it}2$ ist $|s^2+w^2|\ge|\Im w^2|=t/4$ und $\int_0^\infty s/(e^{2\pi s}-1)\,ds=1/24$, also ist der Integralterm betragsmäßig höchstens $1/(3t)$. Ferner $\Re\log w=\log|w|\ge\log(t/2)$ und $\Re\frac1{2w}=\frac{1/8}{|w|^2}\le\frac1{2t^2}$. Somit $A(t)\ge\log\frac t{2\pi}-\frac1{2t^2}-\frac1{3t}\ge\log\frac t{2\pi}-\frac1t$ für $t\ge1$. Wegen $|\cos|\le1$ ist $\Psi_L(t)\ge\log\frac t{2\pi}-\frac1t-A_L$; das ist wachsend in $t$ und gleich $\beta^*$ bei $T^\sharp$. Die Positivität von $\beta^*$ wird in jedem Fall in Ballarithmetik geprüft.
+\end{proof}
+
+Wegen $\frac1\pi\int_0^\infty|\hat f|^2=\|f\|_2^2$ für reelles $f$ folgt Zhus Reduktion \cite{Zhu26}:
+\begin{equation}\label{eq:R}
+Q(f)\ \ge\ R(f):=2\,\hat f(\tfrac i2)\hat f(-\tfrac i2)+\frac1\pi\int_0^{T^\sharp}\bigl(\Psi_L(t)-\beta^*\bigr)|\hat f(t)|^2\,dt+\beta^*\|f\|_2^2 .
+\end{equation}
+
+\begin{lemma}[Monotonie]\label{lem:mono}
+$t\mapsto\Re\psi(\frac14+\frac{it}2)$ ist auf $[0,\infty)$ monoton wachsend. Daher
+\[\sup_{0\le t\le T}\bigl|\Re\psi(\tfrac14+\tfrac{it}2)\bigr|\le\max\bigl\{|\psi(\tfrac14)|,\,|\Re\psi(\tfrac14+\tfrac{iT}2)|\bigr\}.\]
+\end{lemma}
+\begin{proof}
+Aus $\psi(z)=-\gamma+\sum_{n\ge0}\bigl(\frac1{n+1}-\frac1{n+z}\bigr)$ folgt für $x>0$
+\[\Re\psi(x+iy)-\psi(x)=\sum_{n\ge0}\frac{y^2}{(n+x)\bigl((n+x)^2+y^2\bigr)},\]
+wachsend in $y^2$.
+\end{proof}
+
+\section{Methode}\label{sec:method}
+
+\paragraph{Basis.} Sei $\sigma\in\{0,1\}$ der Sektor und $m_k=2k+\sigma$. Die Funktionen
+\[e_k(u)=\sqrt{(2m_k+1)/(2L)}\;P_{m_k}(u/L),\qquad u\in[-L,L],\]
+bilden eine Orthonormalbasis des Sektors, und
+\[
+\hat e_k(t)=c_k\, i^{m_k} j_{m_k}(Lt),\qquad c_k=2L\sqrt{\tfrac{2m_k+1}{2L}},
+\]
+mit der sphärischen Bessel-Funktion $j_m$. Bei $z=\pm\frac i2$: $\hat e_k(\tfrac i2)=c_k(-1)^{m_k} i_{m_k}(L/2)$ und $\hat e_k(-\tfrac i2)=(-1)^{m_k}\hat e_k(\tfrac i2)$ ($i_m$ modifizierte sphärische Bessel-Funktion). In Koordinaten $f=\sum a_ke_k$ ist $R(f)=a^{\mathsf T}\mathcal M a$ mit
+\[
+\mathcal M_{kl}=\frac1\pi\int_0^{T^\sharp}(\Psi_L-\beta^*)\,c_kc_l(-1)^{k+l}j_{m_k}(Lt)j_{m_l}(Lt)\,dt+2(-1)^\sigma p_kp_l+\beta^*\delta_{kl},\quad p_k=c_k\,i_{m_k}(L/2).
+\]
+
+\paragraph{Kopfblock.} Für $k,l<N$ wird das Integral mit zusammengesetzter Gauß--Legendre-Quadratur ($P$ Paneele à 32 Knoten) ausgewertet; Knoten und Gewichte sind Arb-Bälle \cite{Johansson17}, 320 bzw.\ 384 Bit. Sphärische Bessel-Werte werden per Aufwärtsrekurrenz am exakten Ballmittelpunkt mit 2048 Bit berechnet und die Argumentunschärfe über $|j_m'(x)|\le\frac12$ (aus $j_m(x)=\frac12(-i)^m\int_{-1}^1P_m(s)e^{ixs}ds$) wieder aufgeschlagen; wird der Rekurrenz-Ball zu breit, wird direkt in Arb ausgewertet. Die Quadratur läuft etappenweise; Teilsummen werden als (Mittelpunkt, Radius) mit explizitem Rundungszuschlag gespeichert und erneut in Ballarithmetik summiert.
+
+\paragraph{Quadraturfehler.} Auf jedem Paneel der halben Länge $a=T^\sharp/(2P)$ verwenden wir die Bernstein-Ellipse mit kleiner Halbachse $b=0{,}4$ und $\rho=(b+\sqrt{a^2+b^2})/a$; sie liegt in der Kreisscheibe vom Radius $r=\sqrt{a^2+b^2}<\frac12$ um die Paneelmitte und meidet so die Pole bei $t=\pm\frac i2$ der analytischen Fortsetzung $\frac12[\psi(\frac14+\frac{iz}2)+\psi(\frac14-\frac{iz}2)]$ von $\Re\psi(\frac14+\frac{it}2)$. Dort gilt $|j_m(Lz)|\le e^{L|\Im z|}$, $|\cos(z\log n)|\le\cosh(b\log n)$, und $|\psi|$ wird über $\psi(z)=\psi(z+1)-\frac1z$ und, für $\Re w\ge1$, $|\psi(w)|\le\log|w|+\frac\pi2+\frac1{2|w|}+\frac19$ (Binet II mit $|s^2+w^2|\ge\frac34$) beschränkt. Die klassische Abschätzung $|I-I_n|\le\frac{64}{15}\,a\,M\rho^{-2n}/(\rho^2-1)$ \cite{Trefethen13} beschränkt jeden Eintrag; die Frobeniusnorm der Fehlermatrix ist höchstens $\eps_{\rm quad}$.
+
+\paragraph{Kleinster Eigenwert des Kopfblocks.} Ein Kandidat $\lambda$ stammt aus einem hochgenauen Gleitkomma-Eigenlöser. Mit $c=0{,}99\lambda$ berechnen wir einen genäherten Cholesky-Faktor $\tilde L$ von $\operatorname{mid}(\mathcal M_N)-cI$, runden ihn auf exakte Binärzahlen und schließen $E=\mathcal M_N-\tilde L\tilde L^{\mathsf T}-cI$ in Ballarithmetik ein. Da $\tilde L\tilde L^{\mathsf T}\succeq0$ exakt gilt, folgt $\lambda_{\min}(\mathcal M_N)\ge c-\|E\|_F$ (Rump \cite{Rump10}). Eine naive Intervall-$LDL^{\mathsf T}$-Zerlegung scheitert hier am Radiuswachstum.
+
+\paragraph{Schwanzmoden.} Für $k\ge N$ verwenden wir $|j_m(x)|\le x^m/(2m+1)!!$, $i_m(x)\le x^me^x/(2m+1)!!$ und Lemma~\ref{lem:mono} für $\sup_{[0,T^\sharp]}|\Psi_L-\beta^*|\le|\psi(\frac14)|+|\Re\psi(\frac14+\frac{iT^\sharp}2)|+\log\pi+A_L+\beta^*$. Das liefert $\eps_B$ (Kopf--Schwanz-Kopplung), $\eps_D$ (Integralanteil Schwanz--Schwanz) und eine Zahl $\pi_{\rm tail}$ mit $2\|p_{\rm tail}\|\le\pi_{\rm tail}$ (der Pol trägt $\pm2(p\cdot a)^2$ bei, im geraden Sektor nichtnegativ, im ungeraden nichtpositiv). Mit $f=h+r$ (Kopf und Schwanz) gilt
+\[
+R(f)\ \ge\ \lambda_{\rm Kopf}\|h\|^2-2\eps_B\|h\|\|r\|+\mu\|r\|^2,\qquad \mu=\beta^*-\eps_D-\pi_{\rm tail}^2 ,
+\]
+also $R(f)\ge(\min\{\lambda_{\rm Kopf},\mu\}-\eps_B)\|f\|^2$. Wir prüfen $\mu>\lambda_{\rm Kopf}$ rigoros; die zertifizierte Konstante ist $\lambda_{\rm Kopf}-\eps_B-\eps_{\rm quad}$.
+
+\section{Ergebnisse}
+
+\begin{theorem}\label{thm:main}
+Für jedes $f\in C_c^\infty((-L,L);\mathbb C)$ gilt
+\[
+Q(f)\ge 1{,}0174\cdot10^{-17}\,\|f\|_2^2\quad\text{für }L=0{,}8,\qquad
+Q(f)\ge 2{,}9256\cdot10^{-23}\,\|f\|_2^2\quad\text{für }L=0{,}9 .
+\]
+\end{theorem}
+\begin{proof}
+Nach der Paritätszerlegung und \eqref{eq:R} genügt eine untere Schranke für $R$ in jedem Sektor; die Konstanten sind die Minima der zertifizierten Sektorwerte in Tabelle~\ref{tab:cert}. Der Beweis ist rechnergestützt; jede Größe der Schlussungleichung ist eine rigorose Balleinschließung.
+\end{proof}
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+ & \multicolumn{2}{c}{$L=0{,}8$} & \multicolumn{2}{c}{$L=0{,}9$}\\
+ & gerade & ungerade & gerade & ungerade\\
+\midrule
+Primzahlpotenzen $n<e^{2L}$ & \multicolumn{2}{c}{2, 3, 4} & \multicolumn{2}{c}{2, 3, 4, 5}\\
+$A_L$; $T_1=2\pi e^{A_L}$ & \multicolumn{2}{c}{$2{,}94197$;\ $119{,}09$} & \multicolumn{2}{c}{$4{,}38144$;\ $502{,}3$}\\
+$T^\sharp$; $\beta^*$ & \multicolumn{2}{c}{$200$;\ $0{,}513467$} & \multicolumn{2}{c}{$550$;\ $0{,}088724$}\\
+Moden $N$ (Grade) & 200 (0--398) & 200 (1--399) & 400 (0--798) & 400 (1--799)\\
+Paneele $\times$ Knoten; Präzision & \multicolumn{2}{c}{$400\times32$; 320 Bit} & \multicolumn{2}{c}{$1100\times32$; 384 Bit}\\
+\midrule
+Kandidat $\lambda$ & $1{,}02769\cdot10^{-17}$ & $1{,}14105\cdot10^{-14}$ & $2{,}95620\cdot10^{-23}$ & $4{,}93421\cdot10^{-20}$\\
+Rump-Residuum $\|E\|_F$ & $6{,}1\cdot10^{-90}$ & $6{,}1\cdot10^{-90}$ & $2{,}0\cdot10^{-62}$ & $9{,}5\cdot10^{-108}$\\
+$\eps_{\rm quad}$ & $6{,}2\cdot10^{-28}$ & $6{,}2\cdot10^{-28}$ & $1{,}0\cdot10^{-26}$ & $1{,}0\cdot10^{-26}$\\
+$\eps_B$ & $1{,}8\cdot10^{-102}$ & $3{,}7\cdot10^{-103}$ & $4{,}6\cdot10^{-56}$ & $1{,}4\cdot10^{-56}$\\
+Schwanzblock $\mu$ & $0{,}5135$ & $0{,}5135$ & $0{,}0887$ & $0{,}0887$\\
+\textbf{zertifiziert} & $\mathbf{1{,}0174\cdot10^{-17}}$ & $\mathbf{1{,}1296\cdot10^{-14}}$ & $\mathbf{2{,}9256\cdot10^{-23}}$ & $\mathbf{4{,}8849\cdot10^{-20}}$\\
+\bottomrule
+\end{tabular}
+\caption{Parameter und Ergebnisse der Zertifikate (Dateien \texttt{cert\_08\_*.json}, \texttt{cert\_09\_*.json}).}
+\label{tab:cert}
+\end{table}
+
+\paragraph{Konsistenzprüfungen.}
+(a) Bei $L=0{,}8$ liegt der Wert des geraden Sektors zwischen Zhus zertifizierter unterer Schranke $8{,}9\cdot10^{-18}$ und seiner oberen Schranke $2{,}27\cdot10^{-17}$; der Kandidat ist stabil unter $N=150\to200$ und $P=100,160,400$ auf $10^{-21}$.
+(b) Ein unabhängiger Ortsraum-Code (Monombasis auf einem Intervall der Länge $2L$, Autokorrelationen als exakte Polynome, 150 Stellen, ohne Paritätseinschränkung) liefert bei $L=0{,}9$ Rayleigh--Ritz-\emph{obere} Schranken $1{,}0\cdot10^{-14}$, $3{,}3\cdot10^{-18}$, $1{,}5\cdot10^{-20}$ für $N=24,32,40$, alle oberhalb des zertifizierten Werts.
+(c) Die schnelle Bessel-Routine reproduziert die direkte Arb-Auswertung (identisches $\lambda$ bei $L=0{,}8$).
+(d) Der Abstand fällt von $L=0{,}8$ nach $L=0{,}9$ um den Faktor $\approx3{,}5\cdot10^{5}$; Lius $2^{-151}\approx3{,}5\cdot10^{-46}$ bei $L=1$ setzt diesen steilen Abfall fort, wie von Zhus Landau--Widom-Bild vorhergesagt.
+
+\paragraph{Aufwand.} Etwa 3 Minuten je Sektor bei $L=0{,}8$ und etwa 7 Minuten je Sektor bei $L=0{,}9$ (zwei Kerne, Python~3.13, python-flint~0.9.0), plus etwa 2 Minuten für die Schlussverifikation.
+
+\section{Zwei numerische Beobachtungen (nicht zertifiziert)}
+
+\begin{observation}[Archimedische Schwelle]
+Lässt man in \eqref{eq:Q} die Primzahlterme weg (Pol- und archimedischer Teil bleiben), so bleibt die Form in einem konvergierten Galerkin-Verfahren im Ortsraum (Monombasis, $N=16$ und $24$, 120 Stellen, Bisektion) positiv bis zur halben Fensterbreite $L_{\rm arch}\approx0{,}371608$ (Fensterlänge $0{,}743216$) und ist darüber indefinit. Die erste Primzahlpotenz tritt bei $\frac12\log2\approx0{,}346574$ ein, also etwa $7\,\%$ früher. Numerisch reicht der archimedische Teil allein also etwas über den Bereich hinaus, in dem er mit der vollen Form übereinstimmt -- konsistent mit Connes--Consani \cite{CC21}. Da Galerkin-Werte obere Schranken für $\lambda_{\min}$ sind, ist die Indefinitheit oberhalb $L_{\rm arch}$ die belastbare Richtung; der genaue Wert von $L_{\rm arch}$ ist numerisch.
+\end{observation}
+
+\begin{observation}[Slepian-Zählung des archimedischen Defizits]
+$A(t)<0$ gilt genau für $|t|<t_0=6{,}2898359888\ldots$ (nahe an, aber verschieden von $2\pi$). Für Fensterlängen $\ell=2L\in[1{,}5;\,3{,}5]$ ist die Zahl der negativen Eigenrichtungen des archimedischen Teils mit Pol gleich $\ell t_0/\pi-1$ (gerundet), wie für einen Zeit-Band-Begrenzungsoperator zu erwarten \cite{SlepianPollak61,LandauWidom80}. Auf diesen Richtungen kompensieren die Primzahlterme kollektiv: mehrere Primzahlpotenzen mit Beiträgen beider Vorzeichen, nicht eine Primzahl je Richtung.
+\end{observation}
+
+\section{Grenzen}
+Satz~\ref{thm:main} ist eine Aussage über zwei feste Fenster. Er beweist oder widerlegt die RV nicht, und die Methode lässt sich nicht auf alle $L$ ausdehnen: Der Abstand fällt doppelt exponentiell, der Aufwand wächst entsprechend. Das Zertifikat hängt von der Korrektheit von Arb/python-flint und unseres Codes ab; deshalb veröffentlichen wir beides zusammen mit den Zertifikatsdateien und laden zur unabhängigen Nachprüfung ein.
+
+\paragraph{Daten und Code.} Python-Quellen (\texttt{zhu\_cert.py}, \texttt{zhu\_stage.py}, \texttt{hp\_scan.py}), Zertifikatsdateien und ein SHA-256-Manifest sind bei der Autorin erhältlich und werden in einem öffentlichen Repositorium (\texttt{github.com/sectio-aurea-q}) hinterlegt. Das Manifest ist per OpenTimestamps in der Bitcoin-Blockchain zeitgestempelt.
+
+\paragraph{Einsatz von KI-Werkzeugen.} Code, Rechnungen und die Ausarbeitung dieses Manuskripts entstanden mit Unterstützung des KI-Systems Claude (Anthropic). Die Verantwortung für den Inhalt liegt bei der Autorin.
+
+\appendix
+\section{Einordnung im Programm LINDBLAD-RIEMANN}
+Dieser Anhang ordnet die Ergebnisse in das Forschungsprogramm der Autorin ein; er enthält keine neuen Behauptungen über $\zeta$.
+
+\paragraph{Lindblad-Form.} Für eine selbstadjungierte, nach unten beschränkte Form $W_L$ (die Weil-Form auf dem Fenster) existieren Operatoren $L_j$ mit $\sum_jL_j^*L_j=W_L$ genau dann, wenn $W_L\ge0$ (man nehme $L=W_L^{1/2}$). Weils Kriterium lässt sich daher als ``für jedes Fenster existiert ein Lindblad-Dissipator mit Zerfallsoperator $W_L$'' lesen. Das ist eine Umformulierung, keine Abkürzung: Gesucht wäre eine Wurzel $W_L=T^*T$, die allein aus der Gammafunktion und den Primzahlen gebaut ist, ohne die Nullstellen einzusetzen.
+
+\paragraph{Hackfort-Diskrepanz.} Wir bezeichnen $\Delta_H(L):=\inf_{\|f\|=1,\ \operatorname{supp}f\subseteq[-L,L]}Q(f)$ als Hackfort-Diskrepanz. Satz~\ref{thm:main} lautet damit $\Delta_H(0{,}8)\ge1{,}0174\cdot10^{-17}$ und $\Delta_H(0{,}9)\ge2{,}9256\cdot10^{-23}$; die RV ist äquivalent zu $\Delta_H(L)\ge0$ für alle $L$. Die Benennung fügt keine mathematische Information hinzu.
+
+\paragraph{Ein Modell, in dem die Wurzel existiert.} Für eine elliptische Kurve $E/\mathbb F_q$ ist die Weil-Form aus den Punktzahlen $N_m=\#E(\mathbb F_{q^m})$ die Toeplitz-Matrix mit $s_0=2$, $s_m=(q^m+1-N_m)q^{-m/2}$. Hier ist Positivität ein Satz (Hasse, Weil): Für den Frobenius $F$ ist $\deg(m-nF)=m^2-amn+qn^2$ die Anzahl der Kernpunkte, also $\ge0$; daraus folgt $|a|\le2\sqrt q$ und $W=T^{\mathsf T}T$ mit expliziter Wurzel $T$ vom Rang $2$. Numerisch (Kurve $y^2=x^3+x+1$, $q=5,7,11,13$, alle Punkte einzeln gezählt) bestätigt sich das auf Maschinengenauigkeit, und schon eine gefälschte Punktzahl macht die Form indefinit. Für $\mathbb Q$ fehlt genau das Gegenstück dieser Gradform -- eine Positivität, die aus einem Zählen stammt; daran arbeitet das Programm von Connes und Consani.
+
+\begin{thebibliography}{99}\small
+\bibitem{CC21} A.~Connes, C.~Consani, Weil positivity and trace formula, the archimedean place, \emph{Selecta Math.} 27 (2021), 77; arXiv:2006.13771.
+\bibitem{Johansson17} F.~Johansson, Arb: efficient arbitrary-precision midpoint-radius interval arithmetic, \emph{IEEE Trans.\ Comput.} 66 (2017), 1281--1292.
+\bibitem{LandauWidom80} H.~J.~Landau, H.~Widom, Eigenvalue distribution of time and frequency limiting, \emph{J.\ Math.\ Anal.\ Appl.} 77 (1980), 469--481.
+\bibitem{Liu26} V.~Liu, Certified Weil positivity beyond the unit window, Preprint (September 2026), alphaXiv.
+\bibitem{Rump10} S.~M.~Rump, Verification methods: rigorous results using floating-point arithmetic, \emph{Acta Numerica} 19 (2010), 287--449.
+\bibitem{SlepianPollak61} D.~Slepian, H.~O.~Pollak, Prolate spheroidal wave functions, Fourier analysis and uncertainty~I, \emph{Bell Syst.\ Tech.\ J.} 40 (1961), 43--63.
+\bibitem{Trefethen13} L.~N.~Trefethen, \emph{Approximation Theory and Approximation Practice}, SIAM, 2013.
+\bibitem{Weil52} A.~Weil, Sur les ``formules explicites'' de la th\'eorie des nombres premiers, \emph{Comm.\ S\'em.\ Math.\ Univ.\ Lund} (1952), 252--265.
+\bibitem{Yoshida92} H.~Yoshida, On Hermitian forms attached to zeta functions, in: \emph{Zeta Functions in Geometry}, Adv.\ Stud.\ Pure Math.\ 21 (1992), 281--325.
+\bibitem{Zhu26} X.~Zhu, Weil positivity in compact windows: a finite reduction, certified two-sided bounds, and a Landau--Widom decay law, arXiv:2608.24827v2 (2026).
+\end{thebibliography}
+\end{document}

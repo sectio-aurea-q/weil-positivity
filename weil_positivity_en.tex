@@ -1,0 +1,191 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage[margin=2.6cm]{geometry}
+\usepackage{booktabs,array}
+\usepackage[hidelinks]{hyperref}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+\theoremstyle{definition}
+\newtheorem{observation}{Observation}
+
+\renewcommand{\Re}{\operatorname{Re}}
+\renewcommand{\Im}{\operatorname{Im}}
+\newcommand{\eps}{\varepsilon}
+
+\title{Weil positivity on the windows $[-0.8,0.8]$ and $[-0.9,0.9]$:\\
+an independent open certificate covering both parity sectors}
+\author{Sabrina Hackfort\\[2pt]
+\small MEGALODON Research (independent), Germany\\
+\small ORCID 0009-0007-7458-2487 \quad \texttt{meg.depth@proton.me}}
+\date{6 October 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Weil's criterion states that the Riemann hypothesis is equivalent to the positivity of a quadratic form $Q$ on test functions of arbitrary support. Positivity on a fixed window $[-L,L]$ is an unconditional, finite statement that can be settled by a computer-assisted proof. Zhu (2026) certified the window $L=0.8$; Liu (2026) has since announced certificates for $L=1$ and $L=17/16$. We give an independent implementation, with openly available code, that certifies
+\[
+Q(f)\ \ge\ 1.017\cdot10^{-17}\,\|f\|_2^2 \quad (L=0.8),\qquad
+Q(f)\ \ge\ 2.925\cdot10^{-23}\,\|f\|_2^2 \quad (L=0.9)
+\]
+for all $f\in C_c^\infty((-L,L);\mathbb C)$. Both parity sectors are certified separately (the odd sector has a negative pole term and a larger margin, $1.13\cdot10^{-14}$ and $4.88\cdot10^{-20}$). The proof uses Zhu's finite reduction, an even/odd Legendre basis, midpoint–radius ball arithmetic, a Bernstein-ellipse bound for the quadrature error with an explicit digamma estimate, and a Rump-type verification of the smallest eigenvalue. We also record two numerical (uncertified) observations: without the prime terms the form becomes indefinite at half-width $\approx0.3716$, about $7\%$ after the first prime enters at $\tfrac12\log2$; and the number of negative directions of the archimedean part follows a Slepian count with bandwidth $t_0=6.28983\ldots$. Nothing here proves or disproves the Riemann hypothesis.
+\end{abstract}
+
+\section{Introduction}
+
+For a test function $f$ let $g=f*\tilde f$, $\tilde f(x)=\overline{f(-x)}$. Weil's explicit formula expresses $\sum_\rho \hat g(\gamma_\rho)$ over the non-trivial zeros $\rho=\tfrac12+i\gamma_\rho$ of $\zeta$ as a pole term, an archimedean term and a sum over prime powers. Weil \cite{Weil52} showed that the Riemann hypothesis (RH) holds if and only if this quantity is non-negative for all $f$. Restricting to $\operatorname{supp} f\subseteq[-L,L]$ gives a family of positivity statements indexed by the window $L$; each is unconditional and involves only the finitely many prime powers $n<e^{2L}$.
+
+For small windows positivity is known by analytic arguments (Yoshida \cite{Yoshida92}; Connes--Consani \cite{CC21} at the archimedean place). Zhu \cite{Zhu26} reduced the window problem to a finite positive-semidefiniteness check and certified $L=0.8$ with margin $8.9\cdot10^{-18}$; he also observed a doubly exponential decay of the optimal constant in $L$ (a Landau--Widom law), which explains why each further window is costly. Liu \cite{Liu26} announced certificates for $L=1$ (margin $2^{-151}$) and $L=17/16$.
+
+\paragraph{Contribution.} We provide (i) an independent re-implementation of Zhu's reduction that reproduces $L=0.8$; (ii) a certificate at the intermediate window $L=0.9$, which cross-checks the two published endpoints; (iii) an explicit treatment of both parity sectors; (iv) fully published code and certificate files. The technical ingredients (Section~\ref{sec:method}) are standard verified-numerics tools; we state every bound used.
+
+\section{Setting and reduction}\label{sec:setting}
+
+We use $\hat f(z)=\int_{\mathbb R} f(u)e^{izu}\,du$, $\Lambda$ the von Mangoldt function, $c_n=2\Lambda(n)/\sqrt n$, and
+\[
+A(t)=\Re\psi\!\left(\tfrac14+\tfrac{it}2\right)-\log\pi,\qquad
+\Psi_L(t)=A(t)-\sum_{\log n<2L}c_n\cos(t\log n),\qquad A_L=\sum_{\log n<2L}c_n .
+\]
+For real $f$ supported in $[-L,L]$ the Weil form reads
+\begin{equation}\label{eq:Q}
+Q(f)=2\,\hat f(\tfrac i2)\,\hat f(-\tfrac i2)+\frac1\pi\int_0^\infty \Psi_L(t)\,|\hat f(t)|^2\,dt ,
+\end{equation}
+and $Q(f)=Q(\Re f)+Q(\Im f)$ for complex $f$. Under RH, $Q(f)=\sum_\rho|\hat f(\gamma_\rho)|^2$.
+
+\paragraph{Parity sectors.} Write $f=f_e+f_o$ (even and odd parts). For real $f$, $\hat f_e$ is real and $\hat f_o$ purely imaginary on $\mathbb R$, so the integral in \eqref{eq:Q} has no cross term; and $\hat f_o(-\tfrac i2)=-\hat f_o(\tfrac i2)$, so the pole term equals $2\hat f_e(\tfrac i2)^2-2\hat f_o(\tfrac i2)^2$. Hence
+\[
+Q(f)=Q(f_e)+Q(f_o),
+\]
+and positivity on the window is equivalent to positivity in each sector. Note that in the odd sector the pole term is \emph{non-positive}.
+
+\begin{lemma}[Tail of the archimedean symbol]\label{lem:binet}
+For $t\ge1$, $A(t)\ge\log\frac t{2\pi}-\frac1t$. Consequently, for $T^\sharp>T_1:=2\pi e^{A_L}$ (and $T^\sharp\ge1$),
+\[
+\Psi_L(t)\ \ge\ \beta^*:=\log\frac{T^\sharp}{2\pi}-\frac1{T^\sharp}-A_L\qquad (t\ge T^\sharp).
+\]
+\end{lemma}
+\begin{proof}
+Binet's second formula gives, for $\Re w>0$, $\psi(w)=\log w-\frac1{2w}-2\int_0^\infty\frac{s\,ds}{(s^2+w^2)(e^{2\pi s}-1)}$. For $w=\frac14+\frac{it}2$ we have $|s^2+w^2|\ge|\Im w^2|=t/4$ and $\int_0^\infty s/(e^{2\pi s}-1)\,ds=1/24$, so the integral term is at most $1/(3t)$ in modulus. Moreover $\Re\log w=\log|w|\ge\log(t/2)$ and $\Re\frac1{2w}=\frac{1/8}{|w|^2}\le\frac1{2t^2}$. Thus $A(t)\ge\log\frac t{2\pi}-\frac1{2t^2}-\frac1{3t}\ge\log\frac t{2\pi}-\frac1t$ for $t\ge1$. Since $|\cos|\le1$, $\Psi_L(t)\ge\log\frac t{2\pi}-\frac1t-A_L$, which is increasing in $t$ and equals $\beta^*$ at $T^\sharp$. The condition $T^\sharp>T_1$ means $\log\frac{T^\sharp}{2\pi}>A_L$; positivity of $\beta^*$ itself is checked in ball arithmetic in every case below.
+\end{proof}
+
+Since $\frac1\pi\int_0^\infty|\hat f|^2=\|f\|_2^2$ for real $f$, Lemma~\ref{lem:binet} yields Zhu's reduction \cite{Zhu26}:
+\begin{equation}\label{eq:R}
+Q(f)\ \ge\ R(f):=2\,\hat f(\tfrac i2)\hat f(-\tfrac i2)+\frac1\pi\int_0^{T^\sharp}\bigl(\Psi_L(t)-\beta^*\bigr)|\hat f(t)|^2\,dt+\beta^*\|f\|_2^2 .
+\end{equation}
+
+\begin{lemma}[Monotonicity]\label{lem:mono}
+$t\mapsto\Re\psi(\frac14+\frac{it}2)$ is non-decreasing on $[0,\infty)$. Hence
+\[\sup_{0\le t\le T}\bigl|\Re\psi(\tfrac14+\tfrac{it}2)\bigr|\le\max\bigl\{|\psi(\tfrac14)|,\,|\Re\psi(\tfrac14+\tfrac{iT}2)|\bigr\}.\]
+\end{lemma}
+\begin{proof}
+From $\psi(z)=-\gamma+\sum_{n\ge0}\bigl(\frac1{n+1}-\frac1{n+z}\bigr)$ we get, for $x>0$,
+\[\Re\psi(x+iy)-\psi(x)=\sum_{n\ge0}\frac{y^2}{(n+x)\bigl((n+x)^2+y^2\bigr)},\]
+which is increasing in $y^2$.
+\end{proof}
+
+\section{Method}\label{sec:method}
+
+\paragraph{Basis.} Let $\sigma\in\{0,1\}$ denote the sector and $m_k=2k+\sigma$. The functions
+\[e_k(u)=\sqrt{(2m_k+1)/(2L)}\;P_{m_k}(u/L),\qquad u\in[-L,L],\]
+form an orthonormal basis of the sector, and
+\[
+\hat e_k(t)=c_k\, i^{m_k} j_{m_k}(Lt),\qquad c_k=2L\sqrt{\tfrac{2m_k+1}{2L}},
+\]
+with $j_m$ the spherical Bessel function. At $z=\pm\frac i2$: $\hat e_k(\tfrac i2)=c_k(-1)^{m_k} i_{m_k}(L/2)$ and $\hat e_k(-\tfrac i2)=(-1)^{m_k}\hat e_k(\tfrac i2)$, with $i_m$ the modified spherical Bessel function. In coordinates $f=\sum a_ke_k$, $R(f)=a^{\mathsf T}\mathcal M a$ with
+\[
+\mathcal M_{kl}=\frac1\pi\int_0^{T^\sharp}(\Psi_L-\beta^*)\,c_kc_l(-1)^{k+l}j_{m_k}(Lt)j_{m_l}(Lt)\,dt+2(-1)^\sigma p_kp_l+\beta^*\delta_{kl},\quad p_k=c_k\,i_{m_k}(L/2).
+\]
+
+\paragraph{Head block.} For $k,l<N$ the integral is evaluated by composite Gauss--Legendre quadrature ($P$ panels, 32 nodes each) with nodes and weights enclosed as Arb balls \cite{Johansson17}, at 320 or 384 bits. Spherical Bessel values are computed by upward recurrence at the exact ball midpoint with 2048 bits and the argument radius is restored using $|j_m'(x)|\le\frac12$ (from $j_m(x)=\frac12(-i)^m\int_{-1}^1P_m(s)e^{ixs}ds$); whenever the recurrence ball is too wide we fall back to direct Arb evaluation. The quadrature is split into stages; partial sums are stored as (midpoint, radius) pairs with an explicit rounding allowance and summed again in ball arithmetic.
+
+\paragraph{Quadrature error.} On each panel of half-length $a=T^\sharp/(2P)$ we use the Bernstein ellipse with semi-minor axis $b=0.4$ and $\rho=(b+\sqrt{a^2+b^2})/a$; it lies in the disc of radius $r=\sqrt{a^2+b^2}<\frac12$ around the panel centre, hence avoids the poles at $t=\pm\frac i2$ of the analytic continuation $\frac12[\psi(\frac14+\frac{iz}2)+\psi(\frac14-\frac{iz}2)]$ of $\Re\psi(\frac14+\frac{it}2)$. On it, $|j_m(Lz)|\le e^{L|\Im z|}$, $|\cos(z\log n)|\le\cosh(b\log n)$, and $|\psi|$ is bounded via $\psi(z)=\psi(z+1)-\frac1z$ and, for $\Re w\ge1$, $|\psi(w)|\le\log|w|+\frac\pi2+\frac1{2|w|}+\frac19$ (Binet II with $|s^2+w^2|\ge\frac34$). The classical estimate $|I-I_n|\le\frac{64}{15}\,a\,M\rho^{-2n}/(\rho^2-1)$ \cite{Trefethen13} then bounds every entry, and the Frobenius norm of the error matrix is at most $\eps_{\rm quad}$.
+
+\paragraph{Smallest eigenvalue of the head block.} A candidate $\lambda$ is obtained from a floating eigen-solver at high precision. With $c=0.99\lambda$ we compute an approximate Cholesky factor $\tilde L$ of $\operatorname{mid}(\mathcal M_N)-cI$, round it to exact binary numbers and enclose $E=\mathcal M_N-\tilde L\tilde L^{\mathsf T}-cI$ in ball arithmetic. Since $\tilde L\tilde L^{\mathsf T}\succeq0$ exactly, $\lambda_{\min}(\mathcal M_N)\ge c-\|E\|_F$ (Rump \cite{Rump10}). A naive interval $LDL^{\mathsf T}$ fails here because of radius growth.
+
+\paragraph{Tail modes.} For $k\ge N$ we use $|j_m(x)|\le x^m/(2m+1)!!$ and $i_m(x)\le x^me^x/(2m+1)!!$, and Lemma~\ref{lem:mono} to bound $\sup_{[0,T^\sharp]}|\Psi_L-\beta^*|\le|\psi(\frac14)|+|\Re\psi(\frac14+\frac{iT^\sharp}2)|+\log\pi+A_L+\beta^*$. This gives $\eps_B$ (head--tail coupling), $\eps_D$ (tail--tail integral part) and a number $\pi_{\rm tail}$ with $2\|p_{\rm tail}\|\le\pi_{\rm tail}$ (the pole contributes $\pm2(p\cdot a)^2$, non-negative in the even and non-positive in the odd sector). Writing $f=h+r$ (head and tail),
+\[
+R(f)\ \ge\ \lambda_{\rm head}\|h\|^2-2\eps_B\|h\|\|r\|+\mu\|r\|^2,\qquad \mu=\beta^*-\eps_D-\pi_{\rm tail}^2 ,
+\]
+so $R(f)\ge(\min\{\lambda_{\rm head},\mu\}-\eps_B)\|f\|^2$. We check $\mu>\lambda_{\rm head}$ rigorously; the certified constant is $\lambda_{\rm head}-\eps_B-\eps_{\rm quad}$.
+
+\section{Results}
+
+\begin{theorem}\label{thm:main}
+For every $f\in C_c^\infty((-L,L);\mathbb C)$,
+\[
+Q(f)\ge 1.0174\cdot10^{-17}\,\|f\|_2^2\quad\text{for }L=0.8,\qquad
+Q(f)\ge 2.9256\cdot10^{-23}\,\|f\|_2^2\quad\text{for }L=0.9 .
+\]
+\end{theorem}
+\begin{proof}
+By the parity decomposition and \eqref{eq:R} it suffices to bound $R$ from below in each sector; the constants are the minima of the certified sector values in Table~\ref{tab:cert}. The proof is computer-assisted; every quantity entering the final inequality is a rigorous ball enclosure.
+\end{proof}
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+ & \multicolumn{2}{c}{$L=0.8$} & \multicolumn{2}{c}{$L=0.9$}\\
+ & even & odd & even & odd\\
+\midrule
+prime powers $n<e^{2L}$ & \multicolumn{2}{c}{2, 3, 4} & \multicolumn{2}{c}{2, 3, 4, 5}\\
+$A_L$; $T_1=2\pi e^{A_L}$ & \multicolumn{2}{c}{$2.94197$;\ $119.09$} & \multicolumn{2}{c}{$4.38144$;\ $502.3$}\\
+$T^\sharp$; $\beta^*$ & \multicolumn{2}{c}{$200$;\ $0.513467$} & \multicolumn{2}{c}{$550$;\ $0.088724$}\\
+modes $N$ (degrees) & 200 (0--398) & 200 (1--399) & 400 (0--798) & 400 (1--799)\\
+panels $\times$ nodes; precision & \multicolumn{2}{c}{$400\times32$; 320 bit} & \multicolumn{2}{c}{$1100\times32$; 384 bit}\\
+\midrule
+candidate $\lambda$ & $1.02769\cdot10^{-17}$ & $1.14105\cdot10^{-14}$ & $2.95620\cdot10^{-23}$ & $4.93421\cdot10^{-20}$\\
+Rump residual $\|E\|_F$ & $6.1\cdot10^{-90}$ & $6.1\cdot10^{-90}$ & $2.0\cdot10^{-62}$ & $9.5\cdot10^{-108}$\\
+$\eps_{\rm quad}$ & $6.2\cdot10^{-28}$ & $6.2\cdot10^{-28}$ & $1.0\cdot10^{-26}$ & $1.0\cdot10^{-26}$\\
+$\eps_B$ & $1.8\cdot10^{-102}$ & $3.7\cdot10^{-103}$ & $4.6\cdot10^{-56}$ & $1.4\cdot10^{-56}$\\
+tail block $\mu$ & $0.5135$ & $0.5135$ & $0.0887$ & $0.0887$\\
+\textbf{certified} & $\mathbf{1.0174\cdot10^{-17}}$ & $\mathbf{1.1296\cdot10^{-14}}$ & $\mathbf{2.9256\cdot10^{-23}}$ & $\mathbf{4.8849\cdot10^{-20}}$\\
+\bottomrule
+\end{tabular}
+\caption{Certificate parameters and results (files \texttt{cert\_08\_*.json}, \texttt{cert\_09\_*.json}).}
+\label{tab:cert}
+\end{table}
+
+\paragraph{Consistency checks.}
+(a) At $L=0.8$ the even-sector value lies between Zhu's certified lower bound $8.9\cdot10^{-18}$ and his upper bound $2.27\cdot10^{-17}$; the candidate is stable under $N=150\to200$ and $P=100,160,400$ to $10^{-21}$.
+(b) An independent position-space code (monomial basis on an interval of length $2L$, autocorrelations as exact polynomials, 150 digits; no parity restriction) gives Rayleigh--Ritz \emph{upper} bounds $1.0\cdot10^{-14}$, $3.3\cdot10^{-18}$, $1.5\cdot10^{-20}$ for $N=24,32,40$ at $L=0.9$, all above the certified value.
+(c) The fast Bessel routine reproduces the direct Arb evaluation (identical $\lambda$ at $L=0.8$).
+(d) The margin drops by a factor $\approx3.5\cdot10^{5}$ from $L=0.8$ to $L=0.9$; Liu's $2^{-151}\approx3.5\cdot10^{-46}$ at $L=1$ continues this steep decay, as predicted by Zhu's Landau--Widom picture.
+
+\paragraph{Cost.} About 3 minutes per sector at $L=0.8$ and about 7 minutes per sector at $L=0.9$ (two cores, Python~3.13, python-flint~0.9.0), plus about 2 minutes for the final verification.
+
+\section{Two numerical observations (not certified)}
+
+\begin{observation}[Archimedean threshold]
+Drop the prime terms from \eqref{eq:Q} (keep pole and archimedean parts). Computing $\lambda_{\min}$ in a converged position-space Galerkin scheme (monomial basis, $N=16$ and $24$, 120 digits) and bisecting, the form stays positive up to half-width $L_{\rm arch}\approx0.371608$ (window length $0.743216$) and is indefinite beyond. The first prime power enters at $\frac12\log2\approx0.346574$, i.e.\ about $7\%$ earlier. Thus, numerically, the archimedean part alone reaches slightly beyond the region where it coincides with the full form, consistent with Connes--Consani \cite{CC21}. Since Galerkin values are upper bounds for $\lambda_{\min}$, indefiniteness beyond $L_{\rm arch}$ is the reliable direction of this observation; the precise value of $L_{\rm arch}$ is numerical.
+\end{observation}
+
+\begin{observation}[Slepian count of the archimedean deficit]
+$A(t)<0$ exactly for $|t|<t_0=6.2898359888\ldots$ (close to, but different from, $2\pi$). For window length $\ell=2L\in[1.5,3.5]$ the number of negative eigen-directions of the archimedean-plus-pole part equals $\ell t_0/\pi-1$ (rounded), as expected for a time--band-limiting operator \cite{SlepianPollak61,LandauWidom80}. On these directions the prime terms compensate collectively: several prime powers with contributions of both signs, rather than one prime per direction.
+\end{observation}
+
+\section{Limitations}
+Theorem~\ref{thm:main} is a statement about two fixed windows. It does not prove or disprove RH, and the method does not extend to all $L$: the margin decays doubly exponentially and the cost grows accordingly. The certificate depends on the correctness of Arb/python-flint and of our code; we therefore publish both, together with the certificate files, and invite independent re-verification.
+
+\paragraph{Data and code.} Python sources (\texttt{zhu\_cert.py}, \texttt{zhu\_stage.py}, \texttt{hp\_scan.py}), certificate files and a SHA-256 manifest are available from the author and will be deposited in a public repository (\texttt{github.com/sectio-aurea-q}). The manifest is timestamped via OpenTimestamps in the Bitcoin blockchain.
+
+\paragraph{Use of AI tools.} Code, computations and the drafting of this manuscript were carried out with the assistance of the AI system Claude (Anthropic). The author is responsible for the content.
+
+\begin{thebibliography}{99}\small
+\bibitem{CC21} A.~Connes, C.~Consani, Weil positivity and trace formula, the archimedean place, \emph{Selecta Math.} 27 (2021), 77; arXiv:2006.13771.
+\bibitem{Johansson17} F.~Johansson, Arb: efficient arbitrary-precision midpoint-radius interval arithmetic, \emph{IEEE Trans.\ Comput.} 66 (2017), 1281--1292.
+\bibitem{LandauWidom80} H.~J.~Landau, H.~Widom, Eigenvalue distribution of time and frequency limiting, \emph{J.\ Math.\ Anal.\ Appl.} 77 (1980), 469--481.
+\bibitem{Liu26} V.~Liu, Certified Weil positivity beyond the unit window, preprint (September 2026), alphaXiv.
+\bibitem{Rump10} S.~M.~Rump, Verification methods: rigorous results using floating-point arithmetic, \emph{Acta Numerica} 19 (2010), 287--449.
+\bibitem{SlepianPollak61} D.~Slepian, H.~O.~Pollak, Prolate spheroidal wave functions, Fourier analysis and uncertainty~I, \emph{Bell Syst.\ Tech.\ J.} 40 (1961), 43--63.
+\bibitem{Trefethen13} L.~N.~Trefethen, \emph{Approximation Theory and Approximation Practice}, SIAM, 2013.
+\bibitem{Weil52} A.~Weil, Sur les ``formules explicites'' de la th\'eorie des nombres premiers, \emph{Comm.\ S\'em.\ Math.\ Univ.\ Lund} (1952), 252--265.
+\bibitem{Yoshida92} H.~Yoshida, On Hermitian forms attached to zeta functions, in: \emph{Zeta Functions in Geometry}, Adv.\ Stud.\ Pure Math.\ 21 (1992), 281--325.
+\bibitem{Zhu26} X.~Zhu, Weil positivity in compact windows: a finite reduction, certified two-sided bounds, and a Landau--Widom decay law, arXiv:2608.24827v2 (2026).
+\end{thebibliography}
+\end{document}
